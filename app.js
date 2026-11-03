@@ -243,90 +243,120 @@ let editingItemId = null;
     }
 
     
+
+// Group itinerary activities by calendar day
+const groupedItems = {};
+
 data.forEach((item) => {
-  const card = document.createElement("div");
-  card.className = "trip-card";
+  const day = item.starts_at
+    ? new Date(item.starts_at).toLocaleDateString([], {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      })
+    : "Date not specified";
 
-  const heading = document.createElement("h3");
-  heading.textContent = item.title;
+  if (!groupedItems[day]) {
+    groupedItems[day] = [];
+  }
 
-  const category = document.createElement("p");
-  category.textContent = item.item_type;
-
-  const date = document.createElement("p");
-  date.textContent = item.starts_at
-    ? new Date(item.starts_at).toLocaleString()
-    : "Time not specified";
-
-  const place = document.createElement("p");
-  place.textContent = item.location || "";
-
-  const detail = document.createElement("p");
-  detail.textContent = item.notes || "";
-
-  const editButton = document.createElement("button");
-  editButton.textContent = "Edit";
-
-  editButton.addEventListener("click", () => {
-    editingItemId = item.id;
-
-    type.value = item.item_type;
-    name.value = item.title;
-    start.value = item.starts_at
-      ? new Date(item.starts_at).toISOString().slice(0, 16)
-      : "";
-    end.value = item.ends_at
-      ? new Date(item.ends_at).toISOString().slice(0, 16)
-      : "";
-    location.value = item.location || "";
-    notes.value = item.notes || "";
-
-    save.textContent = "Save changes";
-    message.textContent = "Editing: " + item.title;
-
-    form.scrollIntoView({ behavior: "smooth" });
-  });
-
-  const deleteButton = document.createElement("button");
-  deleteButton.textContent = "Delete";
-
-  deleteButton.addEventListener("click", async () => {
-    if (!confirm("Delete this itinerary item?")) return;
-
-    const { error } = await db
-      .from("itinerary_items")
-      .delete()
-      .eq("id", item.id)
-      .eq("trip_id", trip.id);
-
-    if (error) {
-      message.textContent = "Could not delete: " + error.message;
-      return;
-    }
-
-    if (editingItemId === item.id) {
-      editingItemId = null;
-      form.reset();
-      save.textContent = "Add to itinerary";
-    }
-
-    message.textContent = "Activity deleted.";
-    await loadItems();
-  });
-
-  card.append(
-    heading,
-    category,
-    date,
-    place,
-    detail,
-    editButton,
-    deleteButton
-  );
-
-  list.appendChild(card);
+  groupedItems[day].push(item);
 });
 
+// Display each day's activities
+Object.entries(groupedItems).forEach(([day, items]) => {
+  const dayHeading = document.createElement("h2");
+  dayHeading.textContent = day;
+  list.appendChild(dayHeading);
+
+  items.forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "trip-card";
+
+    const heading = document.createElement("h3");
+    heading.textContent = item.title;
+
+    const category = document.createElement("p");
+    category.textContent = item.item_type;
+
+    const date = document.createElement("p");
+    date.textContent = item.starts_at
+      ? new Date(item.starts_at).toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit"
+        })
+      : "Time not specified";
+
+    const place = document.createElement("p");
+    place.textContent = item.location || "";
+
+    const detail = document.createElement("p");
+    detail.textContent = item.notes || "";
+
+    const editButton = document.createElement("button");
+    editButton.textContent = "Edit";
+
+    editButton.addEventListener("click", () => {
+      editingItemId = item.id;
+
+      type.value = item.item_type;
+      name.value = item.title;
+      start.value = item.starts_at
+        ? new Date(item.starts_at).toISOString().slice(0, 16)
+        : "";
+      end.value = item.ends_at
+        ? new Date(item.ends_at).toISOString().slice(0, 16)
+        : "";
+      location.value = item.location || "";
+      notes.value = item.notes || "";
+
+      save.textContent = "Save changes";
+      message.textContent = "Editing: " + item.title;
+
+      form.scrollIntoView({ behavior: "smooth" });
+    });
+
+    const deleteButton = document.createElement("button");
+    deleteButton.textContent = "Delete";
+
+    deleteButton.addEventListener("click", async () => {
+      if (!confirm("Delete this itinerary item?")) return;
+
+      const { error } = await db
+        .from("itinerary_items")
+        .delete()
+        .eq("id", item.id)
+        .eq("trip_id", trip.id);
+
+      if (error) {
+        message.textContent = "Could not delete: " + error.message;
+        return;
+      }
+
+      if (editingItemId === item.id) {
+        editingItemId = null;
+        form.reset();
+        save.textContent = "Add to itinerary";
+      }
+
+      message.textContent = "Activity deleted.";
+      await loadItems();
+    });
+
+    card.append(
+      heading,
+      category,
+      date,
+      place,
+      detail,
+      editButton,
+      deleteButton
+    );
+
+    list.appendChild(card);
+  });
+});
   }
 
   form.addEventListener("submit", async (event) => {

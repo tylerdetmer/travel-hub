@@ -169,6 +169,31 @@ async function createTrip() {
   await loadTrips();
 }
 
+async function resetPassword() {
+  const email = document.getElementById("email").value.trim();
+
+  if (!email) {
+    showMessage("authmsg", "Enter your email address first.");
+    return;
+  }
+
+  showMessage("authmsg", "Sending password reset email...");
+
+  const { error } = await db.auth.resetPasswordForEmail(email, {
+    redirectTo: "https://tylerdetmer.github.io/travel-hub/"
+  });
+
+  if (error) {
+    showMessage("authmsg", error.message);
+    return;
+  }
+
+  showMessage(
+    "authmsg",
+    "Password reset email sent! Check your inbox."
+  );
+}
+
 async function signIn() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
@@ -253,6 +278,7 @@ async function startApp() {
 
   document.getElementById("signin").addEventListener("click", signIn);
   document.getElementById("signup").addEventListener("click", signUp);
+  document.getElementById("resetpassword").addEventListener("click", resetPassword);
   document.getElementById("create").addEventListener("click", createTrip);
   document.getElementById("signout").addEventListener("click", signOut);
 

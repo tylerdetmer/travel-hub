@@ -194,6 +194,29 @@ async function resetPassword() {
   );
 }
 
+async function saveNewPassword() {
+  const password = document.getElementById("newpassword").value;
+
+  if (password.length < 8) {
+    showMessage("resetmsg", "Password must be at least 8 characters.");
+    return;
+  }
+
+  showMessage("resetmsg", "Updating password...");
+
+  const { error } = await db.auth.updateUser({
+    password: password
+  });
+
+  if (error) {
+    showMessage("resetmsg", error.message);
+    return;
+  }
+
+  document.getElementById("password-reset-panel").classList.add("hidden");
+  showMessage("authmsg", "Password updated successfully!");
+}
+
 async function signIn() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
@@ -279,6 +302,7 @@ async function startApp() {
   document.getElementById("signin").addEventListener("click", signIn);
   document.getElementById("signup").addEventListener("click", signUp);
   document.getElementById("resetpassword").addEventListener("click", resetPassword);
+  document.getElementById("savepassword").addEventListener("click", saveNewPassword);
   document.getElementById("create").addEventListener("click", createTrip);
   document.getElementById("signout").addEventListener("click", signOut);
 
@@ -300,17 +324,26 @@ async function startApp() {
     showStatus("Please sign in");
   }
 
-  db.auth.onAuthStateChange(async (_event, session) => {
-    currentUser = session?.user || null;
+  
+db.auth.onAuthStateChange(async (event, session) => {
+  currentUser = session?.user || null;
 
-    if (currentUser) {
-      showScreen("app");
-      await loadTrips();
-    } else {
-      showScreen("auth");
-      showStatus("Please sign in");
-    }
-  });
+  if (event === "PASSWORD_RECOVERY") {
+    showScreen("auth");
+    document.getElementById("password-reset-panel").classList.remove("hidden");
+    showMessage("authmsg", "Enter your new password below.");
+    return;
+  }
+
+  if (currentUser) {
+    showScreen("app");
+    await loadTrips();
+  } else {
+    showScreen("auth");
+    showStatus("Please sign in");
+  }
+});
+
 }
 
 startApp();

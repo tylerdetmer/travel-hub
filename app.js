@@ -640,7 +640,16 @@ async function startApp() {
   }
 
   currentUser = data.session?.user || null;
+const isRecovery =
+  window.location.hash.includes("type=recovery") ||
+  new URLSearchParams(window.location.search).get("type") === "recovery";
 
+if (isRecovery) {
+  showScreen("auth");
+  document.getElementById("password-reset-panel").classList.remove("hidden");
+  showMessage("authmsg", "Enter your new password below.");
+  return;
+}
   if (currentUser) {
     showScreen("app");
     await loadTrips();

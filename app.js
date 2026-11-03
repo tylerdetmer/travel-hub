@@ -115,14 +115,55 @@ async function openTrip(trip) {
   description.textContent =
     "Your trip workspace is ready. We'll build your itinerary, maps, reservations, documents, and budget here.";
 
-  workspace.append(
-    backButton,
-    heading,
-    destination,
-    dates,
-    overview,
-    description
-  );
+  
+const navigation = document.createElement("div");
+navigation.className = "workspace-navigation";
+
+const content = document.createElement("section");
+content.className = "workspace-content";
+
+const sections = {
+  Overview: "Your trip overview and important travel information.",
+  Itinerary: "Your daily schedule, activities, reservations, and plans will appear here.",
+  Map: "Your hotels, restaurants, attractions, and saved locations will appear here.",
+  Documents: "Your flight confirmations, hotel reservations, and travel documents will appear here.",
+  Budget: "Track your estimated trip costs and actual spending here."
+};
+
+function showSection(sectionName) {
+  content.replaceChildren();
+
+  const title = document.createElement("h2");
+  title.textContent = sectionName;
+
+  const text = document.createElement("p");
+  text.textContent = sections[sectionName];
+
+  content.append(title, text);
+}
+
+Object.keys(sections).forEach((sectionName) => {
+  const button = document.createElement("button");
+  button.textContent = sectionName;
+
+  button.addEventListener("click", () => {
+    showSection(sectionName);
+  });
+
+  navigation.appendChild(button);
+});
+
+showSection("Overview");
+
+workspace.append(
+  backButton,
+  heading,
+  destination,
+  dates,
+  navigation,
+  content
+);
+
 
   tripsContainer.appendChild(workspace);
 }

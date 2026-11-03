@@ -130,17 +130,192 @@ const sections = {
   Budget: "Track your estimated trip costs and actual spending here."
 };
 
-function showSection(sectionName) {
+
+async function showSection(sectionName) {
   content.replaceChildren();
 
   const title = document.createElement("h2");
   title.textContent = sectionName;
+  content.appendChild(title);
 
-  const text = document.createElement("p");
-  text.textContent = sections[sectionName];
+  if (sectionName !== "Itinerary") {
+    const text = document.createElement("p");
+    text.textContent = sections[sectionName];
+    content.appendChild(text);
+    return;
+  }
 
-  content.append(title, text);
+  const intro = document.createElement("p");
+  intro.textContent = "Plan your trip, one activity at a time.";
+  content.appendChild(intro);
+
+  const form = document.createElement("form");
+  form.className = "panel";
+
+  function addField(labelText, input) {
+    const label = document.createElement("label");
+    label.textContent = labelText;
+    label.appendChild(input);
+    input.style.display = "block";
+    input.style.width = "100%";
+    return label;
+  }
+
+  const type = document.createElement("select");
+
+  [
+    ["activity", "Activity"],
+    ["flight", "Flight"],
+    ["hotel", "Hotel"],
+    ["restaurant", "Restaurant"],
+    ["transportation", "Transportation"],
+    ["event", "Event"],
+    ["day_trip", "Day trip"]
+  ].forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    type.appendChild(option);
+  });
+
+  const name = document.createElement("input");
+  name.type = "text";
+  name.placeholder = "Example: Visit the Eiffel Tower";
+  name.required = true;
+
+  const start = document.createElement("input");
+  start.type = "datetime-local";
+
+  const end = document.createElement("input");
+  end.type = "datetime-local";
+
+  const location = document.createElement("input");
+  location.type = "text";
+  location.placeholder = "Address or location";
+
+  const notes = document.createElement("textarea");
+  notes.placeholder = "Additional details, confirmation numbers, etc.";
+  notes.rows = 3;
+
+  const save = document.createElement("button");
+  save.type = "submit";
+  save.textContent = "Add to itinerary";
+
+  const message = document.createElement("p");
+
+  form.append(
+    addField("Type of plan", type),
+    addField("Name", name),
+    addField("Start date and time", start),
+    addField("End date and time", end),
+    addField("Location", location),
+    addField("Notes", notes),
+    save,
+    message
+  );
+
+  content.appendChild(form);
+
+  const listTitle = document.createElement("h3");
+  listTitle.textContent = "Your planned activities";
+  content.appendChild(listTitle);
+
+  const list = document.createElement("div");
+  content.appendChild(list);
+
+  async function loadItems() {
+    list.replaceChildren();
+
+    const { data, error } = await db
+      .from("itinerary_items")
+      .select("*")
+      .eq("trip_id", trip.id)
+      .order("starts_at", { ascending: true });
+
+    if (error) {
+      list.textContent = "Unable to load itinerary: " + error.message;
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      list.textContent = "No activities added yet.";
+      return;
+    }
+
+    data.forEach((item) => {
+      const card = document.createElement("div");
+      card.className = "trip-card";
+
+      const heading = document.createElement("h3");
+      heading.textContent = item.title;
+
+      const category = document.createElement("p");
+      category.textContent = item.item_type;
+
+      const date = document.createElement("p");
+      date.textContent = item.starts_at
+        ? new Date(item.starts_at).toLocaleString()
+        : "Time not specified";
+
+      const place = document.createElement("p");
+      place.textContent = item.location || "";
+
+      const detail = document.createElement("p");
+      detail.textContent = item.notes || "";
+
+      card.append(heading, category, date, place, detail);
+      list.appendChild(card);
+    });
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    if (!currentUser) {
+      message.textContent = "Please sign in to add itinerary items.";
+      return;
+    }
+
+    if (start.value && end.value && end.value < start.value) {
+      message.textContent = "The end time must be after the start time.";
+      return;
+    }
+
+    save.disabled = true;
+    message.textContent = "Saving...";
+
+    const { error } = await db
+      .from("itinerary_items")
+      .insert({
+        trip_id: trip.id,
+        item_type: type.value,
+        title: name.value.trim(),
+        starts_at: start.value
+          ? new Date(start.value).toISOString()
+          : null,
+        ends_at: end.value
+          ? new Date(end.value).toISOString()
+          : null,
+        location: location.value.trim() || null,
+        notes: notes.value.trim() || null,
+        created_by: currentUser.id
+      });
+
+    save.disabled = false;
+
+    if (error) {
+      message.textContent = "Could not save: " + error.message;
+      return;
+    }
+
+    form.reset();
+    message.textContent = "Added to your itinerary!";
+    await loadItems();
+  });
+
+  await loadItems();
 }
+
 
 Object.keys(sections).forEach((sectionName) => {
   const button = document.createElement("button");

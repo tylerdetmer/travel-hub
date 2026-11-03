@@ -219,7 +219,7 @@ async function showSection(sectionName) {
   const listTitle = document.createElement("h3");
   listTitle.textContent = "Your planned activities";
   content.appendChild(listTitle);
-
+let editingItemId = null;
   const list = document.createElement("div");
   content.appendChild(list);
 
@@ -242,30 +242,91 @@ async function showSection(sectionName) {
       return;
     }
 
-    data.forEach((item) => {
-      const card = document.createElement("div");
-      card.className = "trip-card";
+    
+data.forEach((item) => {
+  const card = document.createElement("div");
+  card.className = "trip-card";
 
-      const heading = document.createElement("h3");
-      heading.textContent = item.title;
+  const heading = document.createElement("h3");
+  heading.textContent = item.title;
 
-      const category = document.createElement("p");
-      category.textContent = item.item_type;
+  const category = document.createElement("p");
+  category.textContent = item.item_type;
 
-      const date = document.createElement("p");
-      date.textContent = item.starts_at
-        ? new Date(item.starts_at).toLocaleString()
-        : "Time not specified";
+  const date = document.createElement("p");
+  date.textContent = item.starts_at
+    ? new Date(item.starts_at).toLocaleString()
+    : "Time not specified";
 
-      const place = document.createElement("p");
-      place.textContent = item.location || "";
+  const place = document.createElement("p");
+  place.textContent = item.location || "";
 
-      const detail = document.createElement("p");
-      detail.textContent = item.notes || "";
+  const detail = document.createElement("p");
+  detail.textContent = item.notes || "";
 
-      card.append(heading, category, date, place, detail);
-      list.appendChild(card);
-    });
+  const editButton = document.createElement("button");
+  editButton.textContent = "Edit";
+
+  editButton.addEventListener("click", () => {
+    editingItemId = item.id;
+
+    type.value = item.item_type;
+    name.value = item.title;
+    start.value = item.starts_at
+      ? new Date(item.starts_at).toISOString().slice(0, 16)
+      : "";
+    end.value = item.ends_at
+      ? new Date(item.ends_at).toISOString().slice(0, 16)
+      : "";
+    location.value = item.location || "";
+    notes.value = item.notes || "";
+
+    save.textContent = "Save changes";
+    message.textContent = "Editing: " + item.title;
+
+    form.scrollIntoView({ behavior: "smooth" });
+  });
+
+  const deleteButton = document.createElement("button");
+  deleteButton.textContent = "Delete";
+
+  deleteButton.addEventListener("click", async () => {
+    if (!confirm("Delete this itinerary item?")) return;
+
+    const { error } = await db
+      .from("itinerary_items")
+      .delete()
+      .eq("id", item.id)
+      .eq("trip_id", trip.id);
+
+    if (error) {
+      message.textContent = "Could not delete: " + error.message;
+      return;
+    }
+
+    if (editingItemId === item.id) {
+      editingItemId = null;
+      form.reset();
+      save.textContent = "Add to itinerary";
+    }
+
+    message.textContent = "Activity deleted.";
+    await loadItems();
+  });
+
+  card.append(
+    heading,
+    category,
+    date,
+    place,
+    detail,
+    editButton,
+    deleteButton
+  );
+
+  list.appendChild(card);
+});
+
   }
 
   form.addEventListener("submit", async (event) => {
@@ -284,22 +345,38 @@ async function showSection(sectionName) {
     save.disabled = true;
     message.textContent = "Saving...";
 
-    const { error } = await db
-      .from("itinerary_items")
-      .insert({
-        trip_id: trip.id,
-        item_type: type.value,
-        title: name.value.trim(),
-        starts_at: start.value
-          ? new Date(start.value).toISOString()
-          : null,
-        ends_at: end.value
-          ? new Date(end.value).toISOString()
-          : null,
-        location: location.value.trim() || null,
-        notes: notes.value.trim() || null,
-        created_by: currentUser.id
-      });
+    
+const itemData = {
+  trip_id: trip.id,
+  item_type: type.value,
+  title: name.value.trim(),
+  starts_at: start.value
+    ? new Date(start.value).toISOString()
+    : null,
+  ends_at: end.value
+    ? new Date(end.value).toISOString()
+    : null,
+  location: location.value.trim() || null,
+  notes: notes.value.trim() || null,
+  created_by: currentUser.id
+};
+
+let result;
+
+if (editingItemId) {
+  result = await db
+    .from("itinerary_items")
+    .update(itemData)
+    .eq("id", editingItemId)
+    .eq("trip_id", trip.id);
+} else {
+  result = await db
+    .from("itinerary_items")
+    .insert(itemData);
+}
+
+const { error } = result;
+
 
     save.disabled = false;
 
@@ -308,10 +385,11 @@ async function showSection(sectionName) {
       return;
     }
 
-    form.reset();
-    message.textContent = "Added to your itinerary!";
-    await loadItems();
-  });
+    editingItemId = null;
+form.reset();
+save.textContent = "Add to itinerary";
+message.textContent = "Itinerary saved successfully!";
+await loadItems();
 
   await loadItems();
 }

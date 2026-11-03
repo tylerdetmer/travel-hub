@@ -63,11 +63,68 @@ async function loadTrips() {
     dates.textContent =
       `${trip.start_date || "Date not set"} – ${trip.end_date || "Date not set"}`;
 
-    card.append(heading, destination, dates);
-    tripsContainer.appendChild(card);
+    const openButton = document.createElement("button");
+openButton.textContent = "Open trip";
+openButton.addEventListener("click", () => openTrip(trip));
+
+card.append(heading, destination, dates, openButton);
+tripsContainer.appendChild(card);
   });
 
   showStatus("Ready");
+}
+
+async function openTrip(trip) {
+  const appTitle = document.querySelector("#app > h1");
+  const createPanel = document.querySelector("#app > .panel");
+  const tripsContainer = document.getElementById("trips");
+
+  appTitle.classList.add("hidden");
+  createPanel.classList.add("hidden");
+  tripsContainer.replaceChildren();
+
+  const workspace = document.createElement("section");
+  workspace.className = "panel";
+
+  const backButton = document.createElement("button");
+  backButton.textContent = "← Back to trips";
+
+  backButton.addEventListener("click", async () => {
+    appTitle.classList.remove("hidden");
+    createPanel.classList.remove("hidden");
+    await loadTrips();
+  });
+
+  const heading = document.createElement("h1");
+  heading.textContent = trip.name;
+
+  const destination = document.createElement("p");
+  destination.textContent = "Destination: " +
+    (trip.destination || "Not specified");
+
+  const dates = document.createElement("p");
+  dates.textContent =
+    (trip.start_date || "No start date") +
+    " – " +
+    (trip.end_date || "No end date");
+
+  const overview = document.createElement("h2");
+  overview.textContent = "Trip Overview";
+
+  const description = document.createElement("p");
+  description.textContent =
+    "Your trip workspace is ready. We'll build your itinerary, maps, reservations, documents, and budget here.";
+
+  workspace.append(
+    backButton,
+    heading,
+    destination,
+    dates,
+    overview,
+    description
+  );
+
+  tripsContainer.appendChild(workspace);
 }
 
 async function createTrip() {

@@ -133,3 +133,44 @@ button:hover {
     font-size: 26px;
   }
 }
+
+/* Trip workspace navigation */
+
+.workspace-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 24px 0;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.workspace-navigation button {
+  flex: 1 1 auto;
+  min-width: 90px;
+  margin: 0;
+  background: var(--mint);
+  color: var(--green);
+  border: 1px solid var(--border);
+}
+
+.workspace-navigation button:hover {
+  background: var(--green);
+  color: white;
+}
+
+.workspace-content {
+  min-height: 180px;
+  padding: 20px 0;
+}
+
+.workspace-content h2 {
+  color: var(--green);
+}
+
+@media (max-width: 600px) {
+  .workspace-navigation button {
+    flex: 1 1 40%;
+    padding: 14px 8px;
+  }
+}

@@ -420,6 +420,7 @@ form.reset();
 save.textContent = "Add to itinerary";
 message.textContent = "Itinerary saved successfully!";
 await loadItems();
+  });
 
   await loadItems();
 }

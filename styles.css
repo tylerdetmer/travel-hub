@@ -174,3 +174,59 @@ button:hover {
     padding: 14px 8px;
   }
 }
+
+/* Itinerary styling */
+
+.workspace-content form.panel {
+  margin-top: 20px;
+  padding: 20px;
+}
+
+.workspace-content label {
+  color: var(--dark);
+}
+
+.workspace-content input,
+.workspace-content select,
+.workspace-content textarea {
+  width: 100%;
+  padding: 13px;
+  margin-top: 7px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: white;
+  color: var(--dark);
+  font-family: inherit;
+  font-size: 16px;
+}
+
+.workspace-content textarea {
+  resize: vertical;
+}
+
+.workspace-content input:focus,
+.workspace-content select:focus,
+.workspace-content textarea:focus {
+  outline: 2px solid #9bb9a7;
+  border-color: transparent;
+}
+
+.workspace-content form button {
+  width: 100%;
+  margin-top: 12px;
+  padding: 15px;
+}
+
+.workspace-content .trip-card {
+  margin-top: 14px;
+  border-left: 4px solid var(--green);
+}
+
+.workspace-content .trip-card h3 {
+  color: var(--green);
+  margin-top: 0;
+}
+
+.workspace-content .trip-card p {
+  margin-bottom: 8px;
+}

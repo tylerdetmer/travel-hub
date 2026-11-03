@@ -670,4 +670,8 @@ db.auth.onAuthStateChange(async (event, session) => {
 
 }
 
-startApp();
+startApp().catch((error) => {
+  console.error("Travel Hub startup error:", error);
+  showScreen("setup");
+  showStatus("Startup error: " + (error?.message || "Unknown error"));
+});

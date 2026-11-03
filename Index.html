@@ -1,0 +1,61 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#173b35">
+  <title>Travel Hub</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <h2>✦ Travel Hub</h2>
+    <span id="status">Getting started</span>
+  </header>
+
+  <main class="container">
+    <section id="setup" class="panel">
+      <h1>Welcome to Travel Hub</h1>
+      <p>Your trips, plans, and adventures together.</p>
+      <p>We're setting up your travel workspace.</p>
+    </section>
+
+    <section id="auth" class="panel hidden">
+      <h1>Welcome back</h1>
+      <label>Email
+        <input id="email" type="email" placeholder="you@example.com">
+      </label>
+      <label>Password
+        <input id="password" type="password" placeholder="Password">
+      </label>
+      <button id="signin">Sign in</button>
+      <button id="signup">Create account</button>
+      <p id="authmsg"></p>
+    </section>
+
+    <section id="app" class="hidden">
+      <h1>Your trips</h1>
+      <section class="panel">
+        <h2>Create a trip</h2>
+        <input id="tripname" placeholder="Trip name">
+        <input id="destination" placeholder="Destination">
+        <label>Start date
+          <input id="startdate" type="date">
+        </label>
+        <label>End date
+          <input id="enddate" type="date">
+        </label>
+        <button id="create">Create trip</button>
+        <p id="tripmsg"></p>
+      </section>
+      <div id="trips"></div>
+      <button id="signout">Sign out</button>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

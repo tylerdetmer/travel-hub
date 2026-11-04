@@ -191,6 +191,17 @@ async function showSection(sectionName) {
   end.type = "datetime-local";
 
   const location = document.createElement("input");
+  const confirmationNumber = document.createElement("input");
+confirmationNumber.type = "text";
+confirmationNumber.placeholder = "Confirmation number";
+
+const bookingReference = document.createElement("input");
+bookingReference.type = "text";
+bookingReference.placeholder = "Booking reference";
+
+const address = document.createElement("input");
+address.type = "text";
+address.placeholder = "Full street address";
   location.type = "text";
   location.placeholder = "Address or location";
 
@@ -210,6 +221,9 @@ async function showSection(sectionName) {
     addField("Start date and time", start),
     addField("End date and time", end),
     addField("Location", location),
+    addField("Confirmation Number", confirmationNumber),
+addField("Booking Reference", bookingReference),
+addField("Street Address", address),
     addField("Notes", notes),
     save,
     message
@@ -310,6 +324,9 @@ Object.entries(groupedItems).forEach(([day, items]) => {
         ? new Date(item.ends_at).toISOString().slice(0, 16)
         : "";
       location.value = item.location || "";
+      confirmationNumber.value = item.confirmation_number || "";
+bookingReference.value = item.booking_reference || "";
+address.value = item.address || "";
       notes.value = item.notes || "";
 
       save.textContent = "Save changes";
@@ -388,7 +405,10 @@ const itemData = {
     ? new Date(end.value).toISOString()
     : null,
   location: location.value.trim() || null,
-  notes: notes.value.trim() || null,
+confirmation_number: confirmationNumber.value.trim() || null,
+booking_reference: bookingReference.value.trim() || null,
+address: address.value.trim() || null,
+notes: notes.value.trim() || null,
   created_by: currentUser.id
 };
 

@@ -8,6 +8,7 @@ const appSection = document.getElementById("app");
 
 let db;
 let currentUser = null;
+let isPasswordRecovery = false;
 
 function showMessage(elementId, message) {
   document.getElementById(elementId).textContent = message;
@@ -538,8 +539,15 @@ async function saveNewPassword() {
     return;
   }
 
-  document.getElementById("password-reset-panel").classList.add("hidden");
-  showMessage("authmsg", "Password updated successfully!");
+  isPasswordRecovery = false;
+
+document.getElementById("password-reset-panel").classList.add("hidden");
+showMessage("authmsg", "Password updated successfully!");
+
+if (currentUser) {
+  showScreen("app");
+  await loadTrips();
+}
 }
 
 async function signIn() {
@@ -618,7 +626,9 @@ async function startApp() {
     showStatus("Supabase library did not load");
     return;
   }
-
+isPasswordRecovery =
+  window.location.hash.includes("type=recovery") ||
+  new URLSearchParams(window.location.search).get("type") === "recovery";
   db = window.supabase.createClient(
     config.supabaseUrl,
     config.supabasePublishableKey
@@ -633,23 +643,27 @@ async function startApp() {
 
     // Listen for authentication and password recovery events first
   db.auth.onAuthStateChange(async (event, session) => {
-    currentUser = session?.user || null;
+  currentUser = session?.user || null;
 
-    if (event === "PASSWORD_RECOVERY") {
-      showScreen("auth");
-      document.getElementById("password-reset-panel").classList.remove("hidden");
-      showMessage("authmsg", "Enter your new password below.");
-      return;
-    }
+  if (event === "PASSWORD_RECOVERY") {
+    isPasswordRecovery = true;
+  }
 
-    if (currentUser) {
-      showScreen("app");
-      await loadTrips();
-    } else {
-      showScreen("auth");
-      showStatus("Please sign in");
-    }
-  });
+  if (isPasswordRecovery) {
+    showScreen("auth");
+    document.getElementById("password-reset-panel").classList.remove("hidden");
+    showMessage("authmsg", "Enter your new password below.");
+    return;
+  }
+
+  if (currentUser) {
+    showScreen("app");
+    await loadTrips();
+  } else {
+    showScreen("auth");
+    showStatus("Please sign in");
+  }
+});
 
   // Check the current session after registering the listener
   const { data, error } = await db.auth.getSession();
@@ -662,16 +676,12 @@ async function startApp() {
 
   currentUser = data.session?.user || null;
 
-  const isRecovery =
-    window.location.hash.includes("type=recovery") ||
-    new URLSearchParams(window.location.search).get("type") === "recovery";
-
-  if (isRecovery) {
-    showScreen("auth");
-    document.getElementById("password-reset-panel").classList.remove("hidden");
-    showMessage("authmsg", "Enter your new password below.");
-    return;
-  }
+  if (isPasswordRecovery) {
+  showScreen("auth");
+  document.getElementById("password-reset-panel").classList.remove("hidden");
+  showMessage("authmsg", "Enter your new password below.");
+  return;
+}
 
   if (currentUser) {
     showScreen("app");

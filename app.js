@@ -631,6 +631,27 @@ async function startApp() {
   document.getElementById("create").addEventListener("click", createTrip);
   document.getElementById("signout").addEventListener("click", signOut);
 
+    // Listen for authentication and password recovery events first
+  db.auth.onAuthStateChange(async (event, session) => {
+    currentUser = session?.user || null;
+
+    if (event === "PASSWORD_RECOVERY") {
+      showScreen("auth");
+      document.getElementById("password-reset-panel").classList.remove("hidden");
+      showMessage("authmsg", "Enter your new password below.");
+      return;
+    }
+
+    if (currentUser) {
+      showScreen("app");
+      await loadTrips();
+    } else {
+      showScreen("auth");
+      showStatus("Please sign in");
+    }
+  });
+
+  // Check the current session after registering the listener
   const { data, error } = await db.auth.getSession();
 
   if (error) {
@@ -640,29 +661,12 @@ async function startApp() {
   }
 
   currentUser = data.session?.user || null;
-const isRecovery =
-  window.location.hash.includes("type=recovery") ||
-  new URLSearchParams(window.location.search).get("type") === "recovery";
 
-if (isRecovery) {
-  showScreen("auth");
-  document.getElementById("password-reset-panel").classList.remove("hidden");
-  showMessage("authmsg", "Enter your new password below.");
-  return;
-}
-  if (currentUser) {
-    showScreen("app");
-    await loadTrips();
-  } else {
-    showScreen("auth");
-    showStatus("Please sign in");
-  }
+  const isRecovery =
+    window.location.hash.includes("type=recovery") ||
+    new URLSearchParams(window.location.search).get("type") === "recovery";
 
-  
-db.auth.onAuthStateChange(async (event, session) => {
-  currentUser = session?.user || null;
-
-  if (event === "PASSWORD_RECOVERY") {
+  if (isRecovery) {
     showScreen("auth");
     document.getElementById("password-reset-panel").classList.remove("hidden");
     showMessage("authmsg", "Enter your new password below.");
@@ -676,7 +680,6 @@ db.auth.onAuthStateChange(async (event, session) => {
     showScreen("auth");
     showStatus("Please sign in");
   }
-});
 
 }
 

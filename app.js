@@ -1,3 +1,4 @@
+
 const config = window.TRAVEL_HUB_CONFIG;
 
 const statusEl = document.getElementById("status");
@@ -8,6 +9,8 @@ const appSection = document.getElementById("app");
 let db;
 let currentUser = null;
 let isPasswordRecovery = false;
+let activeMap = null;
+let mapMarkers = [];
 
 function showMessage(elementId, message) {
   const element = document.getElementById(elementId);
@@ -59,6 +62,18 @@ function formatTimeRange(item) {
   return `${startTime} – ${endTime}`;
 }
 
+function makeElement(tag, text, className) {
+  const element = document.createElement(tag);
+
+  if (text !== undefined && text !== null) {
+    element.textContent = text;
+  }
+
+  if (className) element.className = className;
+
+  return element;
+}
+
 async function loadTrips() {
   const tripsContainer = document.getElementById("trips");
   tripsContainer.replaceChildren();
@@ -77,7 +92,8 @@ async function loadTrips() {
 
   if (!data || data.length === 0) {
     showStatus("Ready");
-    tripsContainer.textContent = "No trips yet. Create your first trip above!";
+    tripsContainer.textContent =
+      "No trips yet. Create your first trip above!";
     return;
   }
 
@@ -85,18 +101,19 @@ async function loadTrips() {
     const card = document.createElement("section");
     card.className = "trip-card";
 
-    const heading = document.createElement("h2");
-    heading.textContent = trip.name;
+    const heading = makeElement("h2", trip.name);
+    const destination = makeElement(
+      "p",
+      trip.destination || "Destination not added"
+    );
 
-    const destination = document.createElement("p");
-    destination.textContent = trip.destination || "Destination not added";
+    const dates = makeElement(
+      "p",
+      `${trip.start_date || "Date not set"} – ${trip.end_date || "Date not set"}`
+    );
 
-    const dates = document.createElement("p");
-    dates.textContent =
-      `${trip.start_date || "Date not set"} – ${trip.end_date || "Date not set"}`;
+    const openButton = makeElement("button", "Open trip");
 
-    const openButton = document.createElement("button");
-    openButton.textContent = "Open trip";
     openButton.addEventListener("click", () => openTrip(trip));
 
     card.append(heading, destination, dates, openButton);
@@ -107,6 +124,11 @@ async function loadTrips() {
 }
 
 async function openTrip(trip) {
+  if (activeMap) {
+    activeMap.remove();
+    activeMap = null;
+  }
+
   const appTitle = document.querySelector("#app > h1");
   const createPanel = document.querySelector("#app > .panel");
   const tripsContainer = document.getElementById("trips");
@@ -118,27 +140,32 @@ async function openTrip(trip) {
   const workspace = document.createElement("section");
   workspace.className = "panel";
 
-  const backButton = document.createElement("button");
-  backButton.textContent = "← Back to trips";
+  const backButton = makeElement("button", "← Back to trips");
 
   backButton.addEventListener("click", async () => {
+    if (activeMap) {
+      activeMap.remove();
+      activeMap = null;
+    }
+
     appTitle.classList.remove("hidden");
     createPanel.classList.remove("hidden");
     await loadTrips();
   });
 
-  const heading = document.createElement("h1");
-  heading.textContent = trip.name;
+  const heading = makeElement("h1", trip.name);
 
-  const destination = document.createElement("p");
-  destination.textContent =
-    "Destination: " + (trip.destination || "Not specified");
+  const destination = makeElement(
+    "p",
+    "Destination: " + (trip.destination || "Not specified")
+  );
 
-  const dates = document.createElement("p");
-  dates.textContent =
+  const dates = makeElement(
+    "p",
     (trip.start_date || "No start date") +
-    " – " +
-    (trip.end_date || "No end date");
+      " – " +
+      (trip.end_date || "No end date")
+  );
 
   const navigation = document.createElement("div");
   navigation.className = "workspace-navigation";
@@ -148,28 +175,67 @@ async function openTrip(trip) {
 
   const sections = {
     Overview: "Your trip overview and important travel information.",
-    Itinerary: "Your daily schedule, activities, reservations, and plans will appear here.",
-    Map: "Your hotels, restaurants, attractions, and saved locations will appear here.",
-    Documents: "Your flight confirmations, hotel reservations, and travel documents will appear here.",
-    Budget: "Track your estimated trip costs and actual spending here."
+    Itinerary: "Your daily schedule, activities, reservations, and plans.",
+    Map: "Save and explore hotels, restaurants, attractions, and other places.",
+    Documents: "Your flight confirmations, hotel reservations, and travel documents.",
+    Budget: "Track your estimated trip costs and actual spending."
   };
-    async function showSection(sectionName) {
+
+  async function showSection(sectionName) {
+    if (activeMap) {
+      activeMap.remove();
+      activeMap = null;
+    }
+
     content.replaceChildren();
 
-    const title = document.createElement("h2");
-    title.textContent = sectionName;
+    const title = makeElement("h2", sectionName);
     content.appendChild(title);
 
-    if (sectionName !== "Itinerary") {
-      const text = document.createElement("p");
-      text.textContent = sections[sectionName];
-      content.appendChild(text);
+    if (sectionName === "Overview") {
+      content.appendChild(makeElement("p", sections.Overview));
+
+      const summary = makeElement(
+        "div",
+        "",
+        "map-empty"
+      );
+
+      summary.appendChild(
+        makeElement("strong", "Your trip workspace")
+      );
+
+      summary.appendChild(
+        makeElement(
+          "p",
+          "Use the tabs above to manage your itinerary, save places on your map, and organize your travel details."
+        )
+      );
+
+      content.appendChild(summary);
       return;
     }
 
-    const intro = document.createElement("p");
-    intro.textContent =
-      "Plan your trip, one activity or reservation at a time.";
+    if (sectionName === "Itinerary") {
+      await showItinerary();
+      return;
+    }
+
+    if (sectionName === "Map") {
+      await showMap();
+      return;
+    }
+
+    content.appendChild(makeElement("p", sections[sectionName]));
+  }
+
+  // The itinerary and map functions are added in the next sections.
+
+  async function showItinerary() {
+    const intro = makeElement(
+      "p",
+      "Plan your trip, one activity or reservation at a time."
+    );
     content.appendChild(intro);
 
     const form = document.createElement("form");
@@ -234,13 +300,11 @@ async function openTrip(trip) {
       "Additional details, check-in instructions, etc.";
     notes.rows = 3;
 
-    const save = document.createElement("button");
+    const save = makeElement("button", "Add to itinerary");
     save.type = "submit";
-    save.textContent = "Add to itinerary";
 
-    const cancelEdit = document.createElement("button");
+    const cancelEdit = makeElement("button", "Cancel edit");
     cancelEdit.type = "button";
-    cancelEdit.textContent = "Cancel edit";
     cancelEdit.classList.add("hidden");
 
     const message = document.createElement("p");
@@ -262,8 +326,7 @@ async function openTrip(trip) {
 
     content.appendChild(form);
 
-    const listTitle = document.createElement("h3");
-    listTitle.textContent = "Your planned activities";
+    const listTitle = makeElement("h3", "Your planned activities");
     content.appendChild(listTitle);
 
     let editingItemId = null;
@@ -280,7 +343,8 @@ async function openTrip(trip) {
     }
 
     cancelEdit.addEventListener("click", resetEditor);
-          async function loadItems() {
+
+    async function loadItems() {
       list.replaceChildren();
 
       const { data, error } = await db
@@ -290,7 +354,8 @@ async function openTrip(trip) {
         .order("starts_at", { ascending: true });
 
       if (error) {
-        list.textContent = "Unable to load itinerary: " + error.message;
+        list.textContent =
+          "Unable to load itinerary: " + error.message;
         return;
       }
 
@@ -316,34 +381,31 @@ async function openTrip(trip) {
       });
 
       Object.entries(groupedItems).forEach(([day, items]) => {
-        const dayHeading = document.createElement("h2");
-        dayHeading.textContent = day;
+        const dayHeading = makeElement("h2", day);
         list.appendChild(dayHeading);
 
         items.forEach((item) => {
           const card = document.createElement("div");
           card.className = "trip-card";
 
-          const itemHeading = document.createElement("h3");
-          itemHeading.textContent = item.title;
+          const itemHeading = makeElement("h3", item.title);
 
-          const category = document.createElement("p");
-          category.textContent = item.item_type
-            ? item.item_type.replaceAll("_", " ")
-            : "Plan";
+          const category = makeElement(
+            "p",
+            item.item_type
+              ? item.item_type.replaceAll("_", " ")
+              : "Plan"
+          );
 
-          const date = document.createElement("p");
-          date.textContent = formatTimeRange(item);
+          const date = makeElement("p", formatTimeRange(item));
 
-          const place = document.createElement("p");
-          place.textContent = item.location || "";
+          const place = makeElement("p", item.location || "");
 
-          const addressLine = document.createElement("p");
-          addressLine.textContent = item.address
-            ? "Address: " + item.address
-            : "";
+          const addressLine = makeElement(
+            "p",
+            item.address ? "Address: " + item.address : ""
+          );
 
-          const reservationDetails = document.createElement("p");
           const reservationParts = [];
 
           if (item.confirmation_number) {
@@ -358,13 +420,14 @@ async function openTrip(trip) {
             );
           }
 
-          reservationDetails.textContent = reservationParts.join(" | ");
+          const reservationDetails = makeElement(
+            "p",
+            reservationParts.join(" | ")
+          );
 
-          const detail = document.createElement("p");
-          detail.textContent = item.notes || "";
+          const detail = makeElement("p", item.notes || "");
 
-          const editButton = document.createElement("button");
-          editButton.textContent = "Edit";
+          const editButton = makeElement("button", "Edit");
 
           editButton.addEventListener("click", () => {
             editingItemId = item.id;
@@ -374,8 +437,10 @@ async function openTrip(trip) {
             start.value = formatDateTimeForInput(item.starts_at);
             end.value = formatDateTimeForInput(item.ends_at);
             location.value = item.location || "";
-            confirmationNumber.value = item.confirmation_number || "";
-            bookingReference.value = item.booking_reference || "";
+            confirmationNumber.value =
+              item.confirmation_number || "";
+            bookingReference.value =
+              item.booking_reference || "";
             address.value = item.address || "";
             notes.value = item.notes || "";
 
@@ -389,8 +454,7 @@ async function openTrip(trip) {
             });
           });
 
-          const deleteButton = document.createElement("button");
-          deleteButton.textContent = "Delete";
+          const deleteButton = makeElement("button", "Delete");
 
           deleteButton.addEventListener("click", async () => {
             if (!confirm("Delete this itinerary item?")) return;
@@ -416,7 +480,9 @@ async function openTrip(trip) {
           card.append(itemHeading, category, date);
 
           if (place.textContent) card.appendChild(place);
-          if (addressLine.textContent) card.appendChild(addressLine);
+          if (addressLine.textContent) {
+            card.appendChild(addressLine);
+          }
           if (reservationDetails.textContent) {
             card.appendChild(reservationDetails);
           }
@@ -432,7 +498,8 @@ async function openTrip(trip) {
       event.preventDefault();
 
       if (!currentUser) {
-        message.textContent = "Please sign in to add itinerary items.";
+        message.textContent =
+          "Please sign in to add itinerary items.";
         return;
       }
 
@@ -496,7 +563,552 @@ async function openTrip(trip) {
 
     await loadItems();
   }
-    Object.keys(sections).forEach((sectionName) => {
+
+  async function showMap() {
+    const intro = makeElement(
+      "p",
+      "Save restaurants, hotels, attractions, and other places you want to visit. Your saved places will appear on the map."
+    );
+    content.appendChild(intro);
+
+    if (!window.L) {
+      content.appendChild(
+        makeElement(
+          "p",
+          "The map library did not load. Please refresh the page and try again."
+        )
+      );
+      return;
+    }
+
+    const mapElement = document.createElement("div");
+    mapElement.id = "trip-map";
+    content.appendChild(mapElement);
+
+    const form = document.createElement("form");
+    form.className = "map-form";
+
+    const formTitle = makeElement("h3", "Add a place");
+
+    function addMapField(labelText, input) {
+      const label = document.createElement("label");
+      label.textContent = labelText;
+      label.appendChild(input);
+      return label;
+    }
+
+    const placeName = document.createElement("input");
+    placeName.type = "text";
+    placeName.placeholder = "Example: Sagrada Familia";
+    placeName.required = true;
+
+    const category = document.createElement("select");
+
+    [
+      ["restaurant", "Restaurant"],
+      ["attraction", "Attraction"],
+      ["hotel", "Hotel"],
+      ["transportation", "Transportation"],
+      ["shopping", "Shopping"],
+      ["event", "Event"],
+      ["other", "Other"]
+    ].forEach(([value, label]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      category.appendChild(option);
+    });
+
+    const placeAddress = document.createElement("input");
+    placeAddress.type = "text";
+    placeAddress.placeholder = "Street address or city";
+
+    const website = document.createElement("input");
+    website.type = "url";
+    website.placeholder = "https://example.com";
+
+    const placeNotes = document.createElement("textarea");
+    placeNotes.placeholder = "Why you want to visit or other details";
+    placeNotes.rows = 3;
+
+    const favoriteLabel = document.createElement("label");
+    const favorite = document.createElement("input");
+    favorite.type = "checkbox";
+    favoriteLabel.append(favorite, document.createTextNode(" Mark as favorite"));
+
+    const savePlace = makeElement("button", "Save place");
+    savePlace.type = "submit";
+
+    const mapMessage = document.createElement("p");
+
+    form.append(
+      formTitle,
+      addMapField("Place name", placeName),
+      addMapField("Category", category),
+      addMapField("Address", placeAddress),
+      addMapField("Website (optional)", website),
+      addMapField("Notes (optional)", placeNotes),
+      favoriteLabel,
+      savePlace,
+      mapMessage
+    );
+
+    content.appendChild(form);
+
+    const help = makeElement(
+      "p",
+      "Tip: Enter an address to place the location accurately on the map. Address lookup happens when you save, not while you type.",
+      "map-help"
+    );
+    content.appendChild(help);
+
+    const listHeading = makeElement("h3", "Saved places");
+    content.appendChild(listHeading);
+
+    const placesList = document.createElement("div");
+    content.appendChild(placesList);
+
+    let editingPlaceId = null;
+
+    async function findCoordinates(addressText) {
+      const query = addressText.trim();
+
+      if (!query) return null;
+
+      const url =
+        "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=" +
+        encodeURIComponent(query);
+
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/json"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error("Address lookup is temporarily unavailable.");
+      }
+
+      const results = await response.json();
+
+      if (!results.length) return null;
+
+      return {
+        latitude: Number(results[0].lat),
+        longitude: Number(results[0].lon)
+      };
+    }
+
+    function directionsUrl(place) {
+      const destinationText =
+        place.address ||
+        (
+          place.latitude !== null &&
+          place.latitude !== undefined &&
+          place.longitude !== null &&
+          place.longitude !== undefined
+            ? `${place.latitude},${place.longitude}`
+            : place.name
+        );
+
+      return (
+        "https://maps.apple.com/?daddr=" +
+        encodeURIComponent(destinationText)
+      );
+    }
+
+    function openDirections(place) {
+      window.open(directionsUrl(place), "_blank");
+    }
+
+    function resetPlaceForm() {
+      editingPlaceId = null;
+      form.reset();
+      formTitle.textContent = "Add a place";
+      savePlace.textContent = "Save place";
+      mapMessage.textContent = "";
+
+      const cancel = form.querySelector(".cancel-place-edit");
+      if (cancel) cancel.remove();
+    }
+
+    function cancelPlaceEdit() {
+      resetPlaceForm();
+    }
+
+    function beginPlaceEdit(place) {
+      editingPlaceId = place.id;
+
+      placeName.value = place.name || "";
+      category.value = place.category || "other";
+      placeAddress.value = place.address || "";
+      website.value = place.website_url || "";
+      placeNotes.value = place.notes || "";
+      favorite.checked = Boolean(place.is_favorite);
+
+      formTitle.textContent = "Edit place";
+      savePlace.textContent = "Save changes";
+      mapMessage.textContent = "Editing: " + place.name;
+
+      let cancelButton = form.querySelector(".cancel-place-edit");
+
+      if (!cancelButton) {
+        cancelButton = makeElement("button", "Cancel edit");
+        cancelButton.type = "button";
+        cancelButton.className = "secondary-button cancel-place-edit";
+        cancelButton.addEventListener("click", cancelPlaceEdit);
+        form.appendChild(cancelButton);
+      }
+
+      form.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }
+
+    async function savePlaceRecord() {
+      if (!currentUser) {
+        mapMessage.textContent = "Please sign in to save places.";
+        return;
+      }
+
+      const nameValue = placeName.value.trim();
+      const addressValue = placeAddress.value.trim();
+
+      if (!nameValue) {
+        mapMessage.textContent = "Enter a place name.";
+        return;
+      }
+
+      savePlace.disabled = true;
+      mapMessage.textContent = "Saving place...";
+
+      let coordinates = null;
+
+      if (addressValue) {
+        try {
+          coordinates = await findCoordinates(addressValue);
+        } catch (error) {
+          savePlace.disabled = false;
+          mapMessage.textContent = error.message;
+          return;
+        }
+
+        if (!coordinates) {
+          savePlace.disabled = false;
+          mapMessage.textContent =
+            "We couldn't find that address. Check the address and try again.";
+          return;
+        }
+      }
+
+      const placeData = {
+        trip_id: trip.id,
+        name: nameValue,
+        category: category.value,
+        address: addressValue || null,
+        latitude: coordinates
+          ? coordinates.latitude
+          : null,
+        longitude: coordinates
+          ? coordinates.longitude
+          : null,
+        notes: placeNotes.value.trim() || null,
+        website_url: website.value.trim() || null,
+        is_favorite: favorite.checked,
+        source: "manual",
+        created_by: currentUser.id
+      };
+
+      let result;
+
+      if (editingPlaceId) {
+        result = await db
+          .from("trip_places")
+          .update(placeData)
+          .eq("id", editingPlaceId)
+          .eq("trip_id", trip.id);
+      } else {
+        result = await db
+          .from("trip_places")
+          .insert(placeData);
+      }
+
+      savePlace.disabled = false;
+
+      if (result.error) {
+        mapMessage.textContent =
+          "Could not save place: " + result.error.message;
+        return;
+      }
+
+      resetPlaceForm();
+      mapMessage.textContent = "Place saved successfully!";
+      await loadPlaces();
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await savePlaceRecord();
+    });
+
+    // Place loading and map rendering are added in Part 4.
+
+    async function loadPlaces() {
+      placesList.replaceChildren();
+
+      mapMarkers.forEach((marker) => marker.remove());
+      mapMarkers = [];
+
+      const { data, error } = await db
+        .from("trip_places")
+        .select("*")
+        .eq("trip_id", trip.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        placesList.textContent =
+          "Unable to load saved places: " + error.message;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        placesList.appendChild(
+          makeElement(
+            "div",
+            "No places saved yet. Add your first place above!",
+            "map-empty"
+          )
+        );
+        return;
+      }
+
+      const validPlaces = [];
+
+      data.forEach((place) => {
+        const hasCoordinates =
+          Number.isFinite(Number(place.latitude)) &&
+          Number.isFinite(Number(place.longitude)) &&
+          place.latitude !== null &&
+          place.longitude !== null;
+
+        if (hasCoordinates) {
+          const marker = L.marker([
+            Number(place.latitude),
+            Number(place.longitude)
+          ]).addTo(activeMap);
+
+          const popup = document.createElement("div");
+          const popupHeading = makeElement("strong", place.name);
+          const popupCategory = makeElement(
+            "p",
+            place.category.replaceAll("_", " ")
+          );
+
+          popup.append(popupHeading, popupCategory);
+
+          if (place.address) {
+            popup.appendChild(makeElement("p", place.address));
+          }
+
+          if (place.notes) {
+            popup.appendChild(makeElement("p", place.notes));
+          }
+
+          const directionsLink = makeElement(
+            "a",
+            "Get directions"
+          );
+          directionsLink.href = directionsUrl(place);
+          directionsLink.target = "_blank";
+          directionsLink.rel = "noopener noreferrer";
+
+          popup.appendChild(directionsLink);
+
+          marker.bindPopup(popup);
+          mapMarkers.push(marker);
+          validPlaces.push(marker);
+        }
+
+        const card = document.createElement("article");
+        card.className = "map-place-card";
+
+        const cardHeading = makeElement("h3", place.name);
+
+        if (place.is_favorite) {
+          cardHeading.appendChild(
+            makeElement("span", " ★", "map-favorite")
+          );
+        }
+
+        const categoryText = makeElement(
+          "p",
+          "Category: " + place.category.replaceAll("_", " ")
+        );
+
+        card.append(cardHeading, categoryText);
+
+        if (place.address) {
+          card.appendChild(
+            makeElement("p", "Address: " + place.address)
+          );
+        }
+
+        if (place.notes) {
+          card.appendChild(
+            makeElement("p", place.notes)
+          );
+        }
+
+        if (place.website_url) {
+          try {
+            const websiteUrl = new URL(place.website_url);
+
+            if (
+              websiteUrl.protocol === "https:" ||
+              websiteUrl.protocol === "http:"
+            ) {
+              const websiteLink = makeElement(
+                "a",
+                "Visit website"
+              );
+              websiteLink.href = websiteUrl.href;
+              websiteLink.target = "_blank";
+              websiteLink.rel = "noopener noreferrer";
+              card.appendChild(websiteLink);
+            }
+          } catch (error) {
+            // Ignore invalid website addresses.
+          }
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "map-place-actions";
+
+        const directionsButton = makeElement(
+          "button",
+          "Directions"
+        );
+
+        directionsButton.addEventListener("click", () => {
+          openDirections(place);
+        });
+
+        const favoriteButton = makeElement(
+          "button",
+          place.is_favorite ? "★ Unfavorite" : "☆ Favorite",
+          "secondary-button"
+        );
+
+        favoriteButton.addEventListener("click", async () => {
+          favoriteButton.disabled = true;
+
+          const { error: favoriteError } = await db
+            .from("trip_places")
+            .update({
+              is_favorite: !place.is_favorite
+            })
+            .eq("id", place.id)
+            .eq("trip_id", trip.id);
+
+          if (favoriteError) {
+            favoriteButton.disabled = false;
+            alert(
+              "Could not update favorite: " +
+              favoriteError.message
+            );
+            return;
+          }
+
+          await loadPlaces();
+        });
+
+        const editButton = makeElement(
+          "button",
+          "Edit",
+          "secondary-button"
+        );
+
+        editButton.addEventListener("click", () => {
+          beginPlaceEdit(place);
+        });
+
+        const deleteButton = makeElement(
+          "button",
+          "Delete",
+          "delete-button"
+        );
+
+        deleteButton.addEventListener("click", async () => {
+          if (!confirm(`Delete "${place.name}" from this map?`)) {
+            return;
+          }
+
+          deleteButton.disabled = true;
+
+          const { error: deleteError } = await db
+            .from("trip_places")
+            .delete()
+            .eq("id", place.id)
+            .eq("trip_id", trip.id);
+
+          if (deleteError) {
+            deleteButton.disabled = false;
+            alert(
+              "Could not delete place: " +
+              deleteError.message
+            );
+            return;
+          }
+
+          if (editingPlaceId === place.id) {
+            resetPlaceForm();
+          }
+
+          mapMessage.textContent = "Place deleted.";
+          await loadPlaces();
+        });
+
+        actions.append(
+          directionsButton,
+          favoriteButton,
+          editButton,
+          deleteButton
+        );
+
+        card.appendChild(actions);
+        placesList.appendChild(card);
+      });
+
+      if (validPlaces.length > 0) {
+        const group = L.featureGroup(validPlaces);
+        activeMap.fitBounds(group.getBounds(), {
+          padding: [35, 35],
+          maxZoom: 15
+        });
+      }
+    }
+
+    activeMap = L.map(mapElement).setView([20, 0], 2);
+
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+      }
+    ).addTo(activeMap);
+
+    await loadPlaces();
+
+    requestAnimationFrame(() => {
+      if (activeMap) activeMap.invalidateSize();
+    });
+  }
+  
+  // Build the trip workspace navigation.
+  Object.keys(sections).forEach((sectionName) => {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = sectionName;
@@ -534,7 +1146,10 @@ async function createTrip() {
   }
 
   if (startDate && endDate && endDate < startDate) {
-    showMessage("tripmsg", "The end date must be after the start date.");
+    showMessage(
+      "tripmsg",
+      "The end date must be after the start date."
+    );
     return;
   }
 
@@ -551,7 +1166,10 @@ async function createTrip() {
     });
 
   if (error) {
-    showMessage("tripmsg", "Could not create trip: " + error.message);
+    showMessage(
+      "tripmsg",
+      "Could not create trip: " + error.message
+    );
     return;
   }
 
@@ -593,7 +1211,10 @@ async function saveNewPassword() {
   const password = document.getElementById("newpassword").value;
 
   if (password.length < 8) {
-    showMessage("resetmsg", "Password must be at least 8 characters.");
+    showMessage(
+      "resetmsg",
+      "Password must be at least 8 characters."
+    );
     return;
   }
 
@@ -608,7 +1229,10 @@ async function saveNewPassword() {
 
   isPasswordRecovery = false;
 
-  document.getElementById("password-reset-panel").classList.add("hidden");
+  document
+    .getElementById("password-reset-panel")
+    .classList.add("hidden");
+
   showMessage("authmsg", "Password updated successfully!");
 
   if (currentUser) {
@@ -641,7 +1265,10 @@ async function signUp() {
   }
 
   if (password.length < 8) {
-    showMessage("authmsg", "Use a password with at least 8 characters.");
+    showMessage(
+      "authmsg",
+      "Use a password with at least 8 characters."
+    );
     return;
   }
 
@@ -701,8 +1328,12 @@ async function startApp() {
 
   document.getElementById("signin").addEventListener("click", signIn);
   document.getElementById("signup").addEventListener("click", signUp);
-  document.getElementById("resetpassword").addEventListener("click", resetPassword);
-  document.getElementById("savepassword").addEventListener("click", saveNewPassword);
+  document
+    .getElementById("resetpassword")
+    .addEventListener("click", resetPassword);
+  document
+    .getElementById("savepassword")
+    .addEventListener("click", saveNewPassword);
   document.getElementById("create").addEventListener("click", createTrip);
   document.getElementById("signout").addEventListener("click", signOut);
 
@@ -715,7 +1346,10 @@ async function startApp() {
 
     if (isPasswordRecovery) {
       showScreen("auth");
-      document.getElementById("password-reset-panel").classList.remove("hidden");
+      document
+        .getElementById("password-reset-panel")
+        .classList.remove("hidden");
+
       showMessage("authmsg", "Enter your new password below.");
       return;
     }
@@ -741,7 +1375,10 @@ async function startApp() {
 
   if (isPasswordRecovery) {
     showScreen("auth");
-    document.getElementById("password-reset-panel").classList.remove("hidden");
+    document
+      .getElementById("password-reset-panel")
+      .classList.remove("hidden");
+
     showMessage("authmsg", "Enter your new password below.");
     return;
   }
@@ -758,5 +1395,8 @@ async function startApp() {
 startApp().catch((error) => {
   console.error("Travel Hub startup error:", error);
   showScreen("setup");
-  showStatus("Startup error: " + (error?.message || "Unknown error"));
+  showStatus(
+    "Startup error: " + (error?.message || "Unknown error")
+  );
 });
+

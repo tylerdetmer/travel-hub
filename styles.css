@@ -230,3 +230,149 @@ button:hover {
 .workspace-content .trip-card p {
   margin-bottom: 8px;
 }
+
+/* Interactive trip map */
+
+#trip-map {
+  width: 100%;
+  height: 420px;
+  min-height: 300px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin: 16px 0 22px;
+  z-index: 0;
+  background: #eaf2ed;
+}
+
+.leaflet-container {
+  font-family: -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  border-radius: 14px;
+  z-index: 0;
+}
+
+.map-form {
+  background: white;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin: 18px 0;
+}
+
+.map-form h3 {
+  color: var(--green);
+  margin-top: 0;
+}
+
+.map-form label {
+  color: var(--dark);
+}
+
+.map-form input,
+.map-form select,
+.map-form textarea {
+  display: block;
+  width: 100%;
+  padding: 13px;
+  margin-top: 7px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: white;
+  color: var(--dark);
+  font-family: inherit;
+  font-size: 16px;
+}
+
+.map-form textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.map-form input[type="checkbox"] {
+  display: inline-block;
+  width: auto;
+  margin-right: 8px;
+}
+
+.map-place-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--green);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+
+.map-place-card h3 {
+  color: var(--green);
+  margin: 0 0 8px;
+}
+
+.map-place-card p {
+  margin: 6px 0;
+}
+
+.map-place-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.map-place-actions button {
+  margin: 0;
+  padding: 10px 13px;
+}
+
+.map-place-actions .secondary-button {
+  background: var(--mint);
+  color: var(--green);
+  border: 1px solid var(--border);
+}
+
+.map-place-actions .delete-button {
+  background: #a33b35;
+}
+
+.map-favorite {
+  color: #b7791f;
+  font-weight: 700;
+}
+
+.map-empty {
+  background: var(--mint);
+  padding: 16px;
+  border-radius: 12px;
+  margin: 12px 0;
+  color: var(--dark);
+}
+
+.map-help {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.leaflet-popup-content {
+  line-height: 1.5;
+}
+
+.leaflet-popup-content a {
+  color: var(--green);
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  #trip-map {
+    height: 360px;
+    min-height: 280px;
+  }
+
+  .map-form {
+    padding: 15px;
+  }
+
+  .map-place-actions button {
+    flex: 1 1 auto;
+  }
+}

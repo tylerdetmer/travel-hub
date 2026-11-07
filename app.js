@@ -235,7 +235,10 @@ async function openTrip(trip) {
       await showMembers(content, trip);
       return;
     }
-
+    if (sectionName === "Budget") {
+      await showBudget(content, trip);
+      return;
+    }
     content.appendChild(makeElement("p", sections[sectionName]));
   }
 

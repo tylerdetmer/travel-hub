@@ -178,6 +178,7 @@ async function openTrip(trip) {
     Itinerary: "Your daily schedule, activities, reservations, and plans.",
     Map: "Save and explore hotels, restaurants, attractions, and other places.",
     Documents: "Your flight confirmations, hotel reservations, and travel documents.",
+    Members: "Invite family and manage who can view or edit this trip.",
     Budget: "Track your estimated trip costs and actual spending."
   };
 
@@ -228,6 +229,10 @@ async function openTrip(trip) {
     
     if (sectionName === "Documents") {
       await showDocuments(content, trip);
+      return;
+    }
+        if (sectionName === "Members") {
+      await showMembers(content, trip);
       return;
     }
 

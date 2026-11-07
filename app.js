@@ -192,6 +192,11 @@ async function openTrip(trip) {
 
     const title = makeElement("h2", sectionName);
     content.appendChild(title);
+  
+    if (sectionName === "Overview") {
+      await showOverview(content, trip);
+      return;
+    }
 
     if (sectionName === "Overview") {
       content.appendChild(makeElement("p", sections.Overview));

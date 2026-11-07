@@ -225,6 +225,11 @@ async function openTrip(trip) {
       await showMap();
       return;
     }
+    
+    if (sectionName === "Documents") {
+      await showDocuments(content, trip);
+      return;
+    }
 
     content.appendChild(makeElement("p", sections[sectionName]));
   }

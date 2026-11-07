@@ -179,6 +179,7 @@ async function openTrip(trip) {
     Map: "Save and explore hotels, restaurants, attractions, and other places.",
     Documents: "Your flight confirmations, hotel reservations, and travel documents.",
     Members: "Invite family and manage who can view or edit this trip.",
+    Packing: "Create a packing list, assign items, and check things off.",
     Budget: "Track your estimated trip costs and actual spending."
   };
 
@@ -244,6 +245,11 @@ async function openTrip(trip) {
       await showBudget(content, trip);
       return;
     }
+        if (sectionName === "Packing") {
+      await showPacking(content, trip);
+      return;
+    }
+
     content.appendChild(makeElement("p", sections[sectionName]));
   }
 
